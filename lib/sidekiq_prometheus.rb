@@ -3,7 +3,7 @@
 require "benchmark"
 require "rack"
 require "prometheus/client"
-require "prometheus/middleware/exporter"
+require "prometheus/client/rack/exporter"
 require "sidekiq"
 require "sidekiq/api"
 require "webrick"
@@ -245,7 +245,7 @@ module SidekiqPrometheus
     @_metrics_server ||= Thread.new do
       webrick_handler.run(
         Rack::Builder.new {
-          use Prometheus::Middleware::Exporter, registry: SidekiqPrometheus.registry
+          use Prometheus::Client::Rack::Exporter, registry: SidekiqPrometheus.registry
           run ->(_) { [301, {"Location" => "/metrics"}, []] }
         },
         **opts
