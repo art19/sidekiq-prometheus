@@ -191,7 +191,7 @@ module SidekiqPrometheus::Metrics
   def unregister(name:)
     # metric mmap doesn't support unregister
     # registry.unregister(name.to_sym)
-    false
+    nil
   end
 
   class InvalidMetricType < StandardError; end
