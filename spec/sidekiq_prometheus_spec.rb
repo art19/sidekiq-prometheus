@@ -172,6 +172,10 @@ RSpec.describe SidekiqPrometheus do
         SidekiqPrometheus::Metrics.register_sidekiq_job_metrics
         thread = described_class.metrics_server
 
+        # simulate count increase
+        # otherwise mmap version will not export registered only metric
+        SidekiqPrometheus["sidekiq_job_count"].increment
+
         sleep 1
 
         http = Net::HTTP.new(SidekiqPrometheus.metrics_host, SidekiqPrometheus.metrics_port)

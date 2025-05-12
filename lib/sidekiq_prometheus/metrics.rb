@@ -167,25 +167,31 @@ module SidekiqPrometheus::Metrics
     all_preset_labels = preset_labels.dup
     all_preset_labels.merge!(SidekiqPrometheus.preset_labels) if SidekiqPrometheus.preset_labels
 
-    # Aggregate all labels
-    all_labels = labels | SidekiqPrometheus.custom_labels.fetch(name, []) | all_preset_labels.keys
-
-    options = {docstring: docstring,
-               labels: all_labels,
-               preset_labels: all_preset_labels}
-
-    options[:buckets] = buckets if buckets
-
-    metric = registry.send(type, name.to_sym, **options)
-
+    # mmap version metric doesn't have "required labels" (labels arg here) concept
+    # their metric init signature is only name, docstring and labels_hash
+    # Example:
+    # counter = Prometheus::Client::Counter.new(:service_requests_total, 'doc string', {service: '2323'})
+    # counter.increment({ service: 'bar' }, 5)
+    #
+    # So here we just combine all the labels into all_preset_labels
+    # then pass metric as the single labels_hash arg
     init_label_sets = SidekiqPrometheus.init_label_sets.fetch(name, [])
-    init_label_sets.each { |label_set| metric.init_label_set(label_set) }
+    init_label_sets.each { |label_set| all_preset_labels.merge!(label_set) }
 
-    metric
+    # Because mmap version uses positional arg
+    # So we pass the extra histogram bucket if there is any
+    if type == :histogram && buckets
+      # send buckets option
+      registry.send(type, name.to_sym, docstring, all_preset_labels, buckets)
+    else
+      registry.send(type, name.to_sym, docstring, all_preset_labels)
+    end
   end
 
   def unregister(name:)
-    registry.unregister(name.to_sym)
+    # metric mmap doesn't support unregister
+    # registry.unregister(name.to_sym)
+    nil
   end
 
   class InvalidMetricType < StandardError; end
